@@ -41,18 +41,19 @@ def acc_grid(sphere1: "Sphere", vector: np.ndarray, G: float) -> np.ndarray:
     return direction * magnitude
 
 
-def acc(sphere1: "Sphere", sphere2: "Sphere", G: float):
-
-    if sphere1.position.shape != sphere2.position.shape:
+def sphere_vec_acc(sphere1: "Sphere", vector: np.ndarray, G):
+    if sphere1.position.shape != vector.shape:
         raise Exception("Sphere Positions dont have the same shape")
 
     magnitude = (sphere1.mass * G) / \
-        euclidean_distance(sphere2.position, sphere1.position)**2
+        euclidean_distance(vector, sphere1.position)**2
 
-    direction = (sphere1.position - sphere2.position)
-    print((sphere1.identifier, sphere2.identifier), direction, magnitude)
+    direction = (sphere1.position - vector)
 
     return direction * magnitude
+
+def acc(sphere1: "Sphere", sphere2: "Sphere", G: float):
+    return sphere_vec_acc(sphere1, sphere2.position,G)
 
 
 @ dataclass
@@ -96,7 +97,8 @@ class SimulationEngine:
         self.objects: dict[int, Sphere] = objects
         self.G = 6.67*10**(-11)
         self.last_dst = np.infty
-
+        self.range = self.plot_range()
+        self.range =(0,0,200,200)
     def step(self) -> dict[int, Sphere]:
         time_delta = 1
         obj_mesh = np.array(np.meshgrid(
@@ -134,6 +136,25 @@ class SimulationEngine:
         #     # raise Exception("Distance Increasing")
         self.last_dst = curr_dst
         return new_obj_map
+    def plot_range(self):
+        pos = np.array([obj.position for obj in self.objects.values()])
+        return pos[:,0].min(), pos[:,1].min(), pos[:,0].max(), pos[:,1].max()
+
+    def all_vectors(self, granularity=1):
+        minx,miny,maxx,maxy = self.range
+        plotxmin, plotymin, plotxmax, plotymax = minx * 0.75, miny * 0.75, maxx * 1.25, maxy * 1.25
+        linx = np.linspace(plotxmin, plotxmax, int((plotxmax - plotxmin) // granularity))
+        liny = np.linspace(plotymin, plotymax, int((plotymax - plotymin) // granularity))
+        coords = np.array(np.meshgrid(linx, liny)).ravel("F").reshape(-1,2)
+        vectors = np.zeros((coords.shape[0],2,3))
+        for i, (x,y) in enumerate(coords):
+            vectors[i,0,:] =np.array([x,y,0])
+            acc_vect = np.zeros((3))
+            for obj in self.objects.values():
+                acc_vect = acc_vect + sphere_vec_acc(obj, np.array([x,y,0]), self.G)
+            vectors[i,1,:] = acc_vect
+        return vectors
+
 
 
 def main():
