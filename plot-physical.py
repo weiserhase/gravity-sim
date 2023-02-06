@@ -19,36 +19,41 @@ class GravityPlot(object):
         # Vector fields
         vector_fields = self.engine.all_vectors(10)
         print(vector_fields.shape)
-        coords = vector_fields[:,0,:]
-        vectors = vector_fields[:,1,:]
-        x = coords[:,0]
-        y = coords[:,1]
-        self.field = self.axs[0].quiver(x, y, vectors[ :, 0],
+        coords = vector_fields[:, 0, :]
+        vectors = vector_fields[:, 1, :]
+
+        x = coords[:, 0]
+        y = coords[:, 1]
+        xmin = x.min()
+        xmax = x.max()
+        ymin = y.min()
+        ymax = y.max()
+        self.field = self.axs[0].quiver(x, y, vectors[:, 0],
                                         vectors[:,  1])
-                                        
+
         self.axs[0].set_aspect('equal', adjustable='box')
+        # self.axs[0].set_ylim(xmin-4*(xmax-xmin), xmax+4*(xmax-xmin))
+        # self.axs[0].set_xlim(ymin-4*(ymax-ymin), ymax+4*(ymax-ymin))
 
         # Absolute Position
         x, y = np.meshgrid(
             np.arange(200), np.arange(200))
 
-        
         col, pos, labels = self.split_data(self.engine.objects)
         x = pos[:, 0]
         y = pos[:, 1]
         self.scatter = self.axs[1].scatter(
             x, y, s=labels, c=col)
         self.axs[1].set_aspect('equal', adjustable='box')
-        xmin = x.min()
-        xmax = x.max()
-        ymin = y.min()
-        ymax = y.max()
-        plt.xlim([0, 300])
-        plt.ylim([0, 300])
-        # self.axs[1].set_ylim(xmin-4*(xmax-xmin), xmax+4*(xmax-xmin))
-
-        # self.axs[1].set_xlim(ymin-4*(ymax-ymin), ymax+4*(ymax-ymin))
-        return self.scatter,
+        self.axs[1].set_xlim(0, 400)
+        self.axs[1].set_ylim(0, 400)
+        # xmin = x.min()
+        # xmax = x.max()
+        # ymin = y.min()
+        # ymax = y.max()
+        # self.axs[1].set_xlim(xmin-1*(xmax-xmin), xmax+1*(xmax-xmin))
+        # self.axs[1].set_ylim(ymin-1*(ymax-ymin), ymax+1*(ymax-ymin))
+        return self.scatter, self.field
 
     def split_data(self, data: dict[int, phys.Sphere]):
         labels = np.zeros((len(data)))
@@ -83,11 +88,11 @@ class GravityPlot(object):
         vector_fields = self.engine.all_vectors(10)
         # print(vector_fields.shape)
         # coords = vector_fields[:,0,:]
-        vectors = vector_fields[:,1,:]
+        vectors = vector_fields[:, 1, :]
         # x = coords[:,0]
         # y = coords[:,1]
         # self.field.remove()
-        self.field.set_UVC(vectors[:,0], vectors[:,1])
+        self.field.set_UVC(vectors[:, 0], vectors[:, 1])
         # self.field = self.axs[0].quiver(x, y, vectors[ :, 0],
         #                                 vectors[:,  1])
         # Update Plot size
@@ -98,17 +103,18 @@ class GravityPlot(object):
         # xmax = x.max()
         # ymin = y.min()
         # ymax = y.max()
-        # self.axs[1].set_xlim(xmin-0.1*(xmax-xmin), xmax+0.1*(xmax-xmin))
-        # self.axs[1].set_ylim(ymin-0.1*(ymax-ymin), ymax+0.1*(ymax-ymin))
+        # self.axs[1].set_xlim(xmin-1*(xmax-xmin), xmax+1*(xmax-xmin))
+        # self.axs[1].set_ylim(ymin-1*(ymax-ymin), ymax+1*(ymax-ymin))
 
-        return self.scatter,self.field
+        return self.scatter, self.field
 
 
 def split_data(data: dict[int, phys.Sphere]):
     labels = np.zeros((len(data)))
     positions = np.zeros((len(data), 3))
     col = []
-    c_map = {0: "red", 1: "green",2:"blue", 3: "yellow", 4:"black", 5: "purple"}
+    c_map = {0: "red", 1: "green", 2: "blue",
+             3: "yellow", 4: "black", 5: "purple"}
     print(data)
     for key, obj in data.items():
         positions[key] = obj.position
@@ -147,7 +153,7 @@ def test_plot():
     # print("--------------------------------")
 
     obj = {}
-    masses = [10**8, 10**3, 10**6]
+    masses = [10**8, 10**3, 10**8]
     pos = np.array([[150, 150, 0], [150, 50, 0], [100, 100, 0]])
     vel = np.array(([0, 0, 0], [0.08, 0, 0], [0.04, 0, 0]))
     for i in range(3):
