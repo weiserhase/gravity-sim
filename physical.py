@@ -29,6 +29,11 @@ def potential_gradient(sphere1: "Sphere", vector: np.ndarray, G: float):
     return res
 
 
+def potential(sphere1: "Sphere", vector: np.ndarray):
+    if sphere1.position.shape != vector.shape:
+        raise Exception("Sphere Positions dont have the same shape")
+
+
 def acc_grid(sphere1: "Sphere", vector: np.ndarray, G: float) -> np.ndarray:
     if sphere1.position.shape != vector.shape:
         raise Exception("Sphere Positions dont have the same shape")
@@ -52,8 +57,9 @@ def sphere_vec_acc(sphere1: "Sphere", vector: np.ndarray, G):
 
     return direction * magnitude
 
+
 def acc(sphere1: "Sphere", sphere2: "Sphere", G: float):
-    return sphere_vec_acc(sphere1, sphere2.position,G)
+    return sphere_vec_acc(sphere1, sphere2.position, G)
 
 
 @ dataclass
@@ -98,9 +104,10 @@ class SimulationEngine:
         self.G = 6.67*10**(-11)
         self.last_dst = np.infty
         self.range = self.plot_range()
-        self.range =(0,0,200,200)
+        self.range = (0, 0, 200, 200)
+        self.time_delta = 1/1
+
     def step(self) -> dict[int, Sphere]:
-        time_delta = 1
         obj_mesh = np.array(np.meshgrid(
             list(self.objects.values()), list(self.objects.values())))\
             .ravel("F").reshape(-1, 2)
@@ -112,6 +119,7 @@ class SimulationEngine:
             if el1.identifier == el2.identifier:
                 continue
             grad_map[el2.identifier] = acc(el1, el2, self.G)
+
             # grad_map[el2.identifier] = potential_gradient(
             #     el1, el2.position, self.G)
             # print(potential_gradient(el1, el2.position, self.G), np.linalg.norm(
@@ -122,7 +130,7 @@ class SimulationEngine:
             obj = self.objects[identifier]
             # print(obj.position, "Position")
             prev_pos = obj.position
-            obj.update(acceleration, time_delta)
+            obj.update(acceleration, self.time_delta)
             # print(np.linalg.norm(obj.position-prev_pos), obj.identifier)
             # print(obj.position, "Position2")
 
@@ -136,25 +144,29 @@ class SimulationEngine:
         #     # raise Exception("Distance Increasing")
         self.last_dst = curr_dst
         return new_obj_map
+
     def plot_range(self):
         pos = np.array([obj.position for obj in self.objects.values()])
-        return pos[:,0].min(), pos[:,1].min(), pos[:,0].max(), pos[:,1].max()
+        return pos[:, 0].min(), pos[:, 1].min(), pos[:, 0].max(), pos[:, 1].max()
 
     def all_vectors(self, granularity=1):
-        minx,miny,maxx,maxy = self.range
-        plotxmin, plotymin, plotxmax, plotymax = minx * 0.75, miny * 0.75, maxx * 1.25, maxy * 1.25
-        linx = np.linspace(plotxmin, plotxmax, int((plotxmax - plotxmin) // granularity))
-        liny = np.linspace(plotymin, plotymax, int((plotymax - plotymin) // granularity))
-        coords = np.array(np.meshgrid(linx, liny)).ravel("F").reshape(-1,2)
-        vectors = np.zeros((coords.shape[0],2,3))
-        for i, (x,y) in enumerate(coords):
-            vectors[i,0,:] =np.array([x,y,0])
+        minx, miny, maxx, maxy = self.range
+        plotxmin, plotymin, plotxmax, plotymax = minx * \
+            0.75, miny * 0.75, maxx * 1.25, maxy * 1.25
+        linx = np.linspace(plotxmin, plotxmax, int(
+            (plotxmax - plotxmin) // granularity))
+        liny = np.linspace(plotymin, plotymax, int(
+            (plotymax - plotymin) // granularity))
+        coords = np.array(np.meshgrid(linx, liny)).ravel("F").reshape(-1, 2)
+        vectors = np.zeros((coords.shape[0], 2, 3))
+        for i, (x, y) in enumerate(coords):
+            vectors[i, 0, :] = np.array([x, y, 0])
             acc_vect = np.zeros((3))
             for obj in self.objects.values():
-                acc_vect = acc_vect + sphere_vec_acc(obj, np.array([x,y,0]), self.G)
-            vectors[i,1,:] = acc_vect
+                acc_vect = acc_vect + \
+                    sphere_vec_acc(obj, np.array([x, y, 0]), self.G)
+            vectors[i, 1, :] = acc_vect
         return vectors
-
 
 
 def main():
