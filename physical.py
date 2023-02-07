@@ -29,9 +29,11 @@ def potential_gradient(sphere1: "Sphere", vector: np.ndarray, G: float):
     return res
 
 
-def potential(sphere1: "Sphere", vector: np.ndarray):
+def potential(sphere1: "Sphere", vector: np.ndarray, G:float):
     if sphere1.position.shape != vector.shape:
         raise Exception("Sphere Positions dont have the same shape")
+
+    return (sphere1.mass * G)/(2* euclidean_distance(sphere1.position, vector)**3)
 
 
 def acc_grid(sphere1: "Sphere", vector: np.ndarray, G: float) -> np.ndarray:
@@ -159,14 +161,16 @@ class SimulationEngine:
             (plotymax - plotymin) // granularity))
         coords = np.array(np.meshgrid(linx, liny)).ravel("F").reshape(-1, 2)
         vectors = np.zeros((coords.shape[0], 2, 3))
+        pot = np.zeros((coords.shape[0]))
         for i, (x, y) in enumerate(coords):
             vectors[i, 0, :] = np.array([x, y, 0])
             acc_vect = np.zeros((3))
             for obj in self.objects.values():
                 acc_vect = acc_vect + \
                     sphere_vec_acc(obj, np.array([x, y, 0]), self.G)
+                pot[i] = pot[i] +potential (obj, np.array([x, y,0]), self.G) 
             vectors[i, 1, :] = acc_vect
-        return vectors
+        return vectors, pot, np.meshgrid(linx, liny)
 
 
 def main():

@@ -9,37 +9,39 @@ class GravityPlot(object):
     def __init__(self, engine: phys.SimulationEngine):
         self.engine = engine
 
-        self.fig = plt.figure()
-        self.axs = self.fig.add_subplot(3,  1, 1)
-
+        self.add_plots()
         self.animated = anim.FuncAnimation(
             self.fig, self.update, interval=5, init_func=self.setup_plot, blit=True)
 
         print("01")
 
     def add_plots(self):
+        self.fig = plt.figure()
+        # self.axs = self.fig.add_subplot(1, 2, 1)
+
         # self.fig, self.axs = plt.subplots(
         #     2, 2, )
         # print(self.axs)
         # self.ax.append(plt.subplot(323))
         # self.ax.append(plt.subplot(321))
         # self.ax.append(plt.subplot(222, projection="3d"))
-        self.fig.add_subplot(2, 1, 1, projection="3d")
+        # self.axs = self.fig.add_subplot(2, 1, 1, projection="3d")
+        self.axs = self.fig.subplot_mosaic([["field", "gravity"], ["potential", "test"]])
         pass
 
     def setup_plot(self):
         # Vector fields
-        vector_fields = self.engine.all_vectors(10)
-        print(vector_fields.shape)
+        vector_fields, pot, mesh = self.engine.all_vectors(10)
+        print(vector_fields.shape, "Shape")
         coords = vector_fields[:, 0, :]
         vectors = vector_fields[:, 1, :]
         x = coords[:, 0]
         y = coords[:, 1]
 
-        self.field = self.axs.quiver(x, y, vectors[:, 0],
+        self.field = self.axs["field"].quiver(x, y, vectors[:, 0],
                                      vectors[:,  1])
 
-        self.axs.set_aspect('equal', adjustable='box')
+        self.axs["field"].set_aspect('equal', adjustable='box')
 
         # Absolute Position
         x, y = np.meshgrid(
@@ -48,13 +50,21 @@ class GravityPlot(object):
         col, pos, labels = self.split_data(self.engine.objects)
         x = pos[:, 0]
         y = pos[:, 1]
-        self.axs = self.fig.add_subplot(2, 1, 2)
-        self.scatter = self.axs.scatter(
+        ss = self.axs["gravity"].get_subplotspec()
+        self.axs["gravity"].remove()
+        self.axs["gravity"] = self.fig.add_subplot(ss)
+        # self.fig.axs = self.fig.add_axes((0,40,0,40))
+        self.scatter = self.axs["gravity"].scatter(
             x, y, s=labels, c=col)
-        self.axs.set_aspect('equal', adjustable='box')
-        self.axs.set_xlim(0, 400)
-        self.axs.set_ylim(0, 400)
+        self.axs["gravity"].set_aspect('equal', adjustable='box')
+        self.axs["gravity"].set_xlim(0, 400)
+        self.axs["gravity"].set_ylim(0, 400)
 
+
+        ss = self.axs["potential"].get_subplotspec()
+        self.axs["potential"].remove()
+        self.axs["potential"] = self.fig.add_subplot(ss, projection = "3d")
+        # self.axs["potential"].plot_surface(mesh[0], mesh[1], pot)
         xmin, ymin, xmax, ymax = self.engine.plot_range()
         # plt.xlim([xmin*-1, xmax*3])
         # plt.ylim([ymin*-1, ymax*3])
