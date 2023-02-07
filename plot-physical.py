@@ -1,45 +1,32 @@
+import matplotlib as mpl
 import matplotlib.animation as anim
 import matplotlib.pyplot as plt
 import numpy as np
 
 import physical as phys
+from objects import Sphere
 
 
 class GravityPlot(object):
     def __init__(self, engine: phys.SimulationEngine):
         self.engine = engine
 
-        self.add_plots()
+        self.fig = plt.figure()
+        self.axs = self.fig.subplot_mosaic(
+            [["field", "gravity"], ["potential", "test"]])
         self.animated = anim.FuncAnimation(
             self.fig, self.update, interval=5, init_func=self.setup_plot, blit=True)
 
-        print("01")
-
-    def add_plots(self):
-        self.fig = plt.figure()
-        # self.axs = self.fig.add_subplot(1, 2, 1)
-
-        # self.fig, self.axs = plt.subplots(
-        #     2, 2, )
-        # print(self.axs)
-        # self.ax.append(plt.subplot(323))
-        # self.ax.append(plt.subplot(321))
-        # self.ax.append(plt.subplot(222, projection="3d"))
-        # self.axs = self.fig.add_subplot(2, 1, 1, projection="3d")
-        self.axs = self.fig.subplot_mosaic([["field", "gravity"], ["potential", "test"]])
-        pass
-
     def setup_plot(self):
         # Vector fields
-        vector_fields, pot, mesh = self.engine.all_vectors(10)
-        print(vector_fields.shape, "Shape")
-        coords = vector_fields[:, 0, :]
-        vectors = vector_fields[:, 1, :]
+        vector, pot, mesh = self.engine.all_vectors(10, 5)
+        coords = vector[:, 0, :]
+        vectors = vector[:, 1, :]
         x = coords[:, 0]
         y = coords[:, 1]
 
         self.field = self.axs["field"].quiver(x, y, vectors[:, 0],
-                                     vectors[:,  1])
+                                              vectors[:,  1])
 
         self.axs["field"].set_aspect('equal', adjustable='box')
 
@@ -59,12 +46,14 @@ class GravityPlot(object):
         self.axs["gravity"].set_aspect('equal', adjustable='box')
         self.axs["gravity"].set_xlim(0, 400)
         self.axs["gravity"].set_ylim(0, 400)
-
+        self.axs["gravity"].grid()
 
         ss = self.axs["potential"].get_subplotspec()
         self.axs["potential"].remove()
-        self.axs["potential"] = self.fig.add_subplot(ss, projection = "3d")
-        # self.axs["potential"].plot_surface(mesh[0], mesh[1], pot)
+        self.axs["potential"] = self.fig.add_subplot(ss, projection="3d")
+        self.potential = self.axs["potential"].plot_wireframe(mesh[0], mesh[1], np.log10(
+            pot.reshape(-1, mesh[0].shape[0])), rstride=5, cstride=5)  # , [pot.min(), pot.max()], [0, 10] cmap=mpl.cm.magma
+
         xmin, ymin, xmax, ymax = self.engine.plot_range()
         # plt.xlim([xmin*-1, xmax*3])
         # plt.ylim([ymin*-1, ymax*3])
@@ -74,7 +63,7 @@ class GravityPlot(object):
         # self.axs[1].set_ylim(xmin-4*(xmax-xmin), xmax+4*(xmax-xmin))
 
         # self.axs[1].set_xlim(ymin-4*(ymax-ymin), ymax+4*(ymax-ymin))
-        return self.scatter, self.field
+        return self.scatter, self.field, self.potential
 
     def split_data(self, data: dict[int, phys.Sphere]):
         labels = np.zeros((len(data)))
@@ -106,7 +95,7 @@ class GravityPlot(object):
         )
 
         # self.field.remove()
-        vector_fields = self.engine.all_vectors(10)
+        vector_fields, pot, mesh = self.engine.all_vectors(10, 10)
         # print(vector_fields.shape)
         # coords = vector_fields[:,0,:]
         vectors = vector_fields[:, 1, :]
@@ -114,6 +103,14 @@ class GravityPlot(object):
         # y = coords[:,1]
         # self.field.remove()
         self.field.set_UVC(vectors[:, 0], vectors[:, 1])
+        # self.axs["potential"].collections.remove(self.potential)
+        # self.potential = self.axs["potential"].plot_wireframe(mesh[0], mesh[1], np.log10(
+        #     pot.reshape(-1, mesh[0].shape[0])), rstride=5, cstride=5)
+        # self.axs["potential"].clear()
+        # self.potential = self.axs["potential"].plot_surface(
+        # mesh[0], mesh[1], pot.reshape(-1, mesh[0].shape[0]))
+        # self.potential = self.axs["potential"].set_data(
+        #     pot.reshape(-1, mesh[0].shape[0]))
         # self.field = self.axs[0].quiver(x, y, vectors[ :, 0],
         #                                 vectors[:,  1])
         # Update Plot size
@@ -127,7 +124,7 @@ class GravityPlot(object):
         # self.axs[1].set_xlim(xmin-0.1*(xmax-xmin), xmax+0.1*(xmax-xmin))
         # self.axs[1].set_ylim(ymin-0.1*(ymax-ymin), ymax+0.1*(ymax-ymin))
 
-        return self.scatter, self.field
+        return self.scatter, self.field, self.potential
 
 
 def split_data(data: dict[int, phys.Sphere]):
@@ -174,7 +171,7 @@ def test_plot():
     # print("--------------------------------")
 
     obj = {}
-    masses = [10**8, 10**3, 10**6]
+    masses = [10**8, 10**3, 10**8]
     pos = np.array([[150, 150, 0], [150, 50, 0], [100, 100, 0]])
     vel = np.array(([0, 0, 0], [0.08, 0, 0], [0.04, 0, 0]))
     for i in range(3):

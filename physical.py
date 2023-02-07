@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from objects import Sphere
+
 
 def euclidean_distance(vec1, vec2):
     return np.linalg.norm(vec1-vec2)
@@ -29,11 +31,11 @@ def potential_gradient(sphere1: "Sphere", vector: np.ndarray, G: float):
     return res
 
 
-def potential(sphere1: "Sphere", vector: np.ndarray, G:float):
+def potential(sphere1: "Sphere", vector: np.ndarray, G: float):
     if sphere1.position.shape != vector.shape:
         raise Exception("Sphere Positions dont have the same shape")
 
-    return (sphere1.mass * G)/(2* euclidean_distance(sphere1.position, vector)**3)
+    return (sphere1.mass * G)/(2 * euclidean_distance(sphere1.position, vector)**3)
 
 
 def acc_grid(sphere1: "Sphere", vector: np.ndarray, G: float) -> np.ndarray:
@@ -62,42 +64,6 @@ def sphere_vec_acc(sphere1: "Sphere", vector: np.ndarray, G):
 
 def acc(sphere1: "Sphere", sphere2: "Sphere", G: float):
     return sphere_vec_acc(sphere1, sphere2.position, G)
-
-
-@ dataclass
-class Sphere:
-    def __init__(self, identifier: int, mass: float, position: np.ndarray, velocity: np.ndarray):
-        self.identifier = identifier
-        self.mass = mass
-        self.position = position
-        self.velocity = velocity
-
-    def change_velocity(self, vel_change: np.ndarray):
-        # print(vel_change, "velocity setter")
-        self.velocity = vel_change + self.velocity
-        return self
-
-    def update_position(self, position: np.ndarray):
-        # print(self.position, position, "Position setter")
-
-        self.position = position + self.position
-        return self
-
-    def update(self, acceleration: np.ndarray, time_delta: float):
-        # print(f"-----------------{self.identifier}---------------")
-        # print(acceleration, "acceleration: ", time_delta)
-        # print("Velocity: ", self.velocity)
-        # print("Position: ", self.position)
-
-        self.change_velocity(acceleration*time_delta)
-        self.update_position(self.velocity*time_delta)
-        # print("Velocity: ", self.velocity)
-        # print("Position: ", self.position)
-        # print("-------------------END-----------------")
-        return self
-
-    def print(self):
-        print(self.__dict__)
 
 
 class SimulationEngine:
@@ -151,16 +117,29 @@ class SimulationEngine:
         pos = np.array([obj.position for obj in self.objects.values()])
         return pos[:, 0].min(), pos[:, 1].min(), pos[:, 0].max(), pos[:, 1].max()
 
-    def all_vectors(self, granularity=1):
+    def all_vectors(self, vector_granularity, potential_granularity=1):
+        pot, mesh = self.potential_mesh(potential_granularity)
+        return self.vector_field(vector_granularity), pot, mesh
+
+    def generate_mesh(self, granularity):
+
         minx, miny, maxx, maxy = self.range
         plotxmin, plotymin, plotxmax, plotymax = minx * \
             0.75, miny * 0.75, maxx * 1.25, maxy * 1.25
+
         linx = np.linspace(plotxmin, plotxmax, int(
             (plotxmax - plotxmin) // granularity))
         liny = np.linspace(plotymin, plotymax, int(
             (plotymax - plotymin) // granularity))
+
         coords = np.array(np.meshgrid(linx, liny)).ravel("F").reshape(-1, 2)
+        return coords, linx, liny
+
+    def vector_field(self, granularity):
+
+        coords, _, _ = self.generate_mesh(granularity)
         vectors = np.zeros((coords.shape[0], 2, 3))
+
         pot = np.zeros((coords.shape[0]))
         for i, (x, y) in enumerate(coords):
             vectors[i, 0, :] = np.array([x, y, 0])
@@ -168,9 +147,18 @@ class SimulationEngine:
             for obj in self.objects.values():
                 acc_vect = acc_vect + \
                     sphere_vec_acc(obj, np.array([x, y, 0]), self.G)
-                pot[i] = pot[i] +potential (obj, np.array([x, y,0]), self.G) 
-            vectors[i, 1, :] = acc_vect
-        return vectors, pot, np.meshgrid(linx, liny)
+                vectors[i, 1, :] = acc_vect
+        return vectors
+
+    def potential_mesh(self, granularity):
+        # Calculate the
+        coords, linx, liny = self.generate_mesh(granularity)
+
+        pot = np.zeros((coords.shape[0]))
+        for i, (x, y) in enumerate(coords):
+            for obj in self.objects.values():
+                pot[i] = pot[i] + potential(obj, np.array([x, y, 0]), self.G)
+        return pot, np.meshgrid(linx, liny)
 
 
 def main():
