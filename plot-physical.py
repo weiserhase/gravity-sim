@@ -13,13 +13,15 @@ class GravityPlot(object):
 
         self.fig = plt.figure()
         self.axs = self.fig.subplot_mosaic(
-            [["field", "gravity"], ["potential", "test"]])
+            [["potential", "potential", "field", "field"], ["potential", "potential", "gravity", "gravity"]], height_ratios=[5, 5], width_ratios=[2, 2, 2, 2])
+        self.fig.tight_layout(pad=2)
+
         self.animated = anim.FuncAnimation(
             self.fig, self.update, interval=5, init_func=self.setup_plot, blit=True)
 
     def setup_plot(self):
         # Vector fields
-        vector, pot, mesh = self.engine.all_vectors(10, 5)
+        vector, pot, mesh = self.engine.all_vectors(20, 1)
         coords = vector[:, 0, :]
         vectors = vector[:, 1, :]
         x = coords[:, 0]
@@ -39,7 +41,9 @@ class GravityPlot(object):
         y = pos[:, 1]
         ss = self.axs["gravity"].get_subplotspec()
         self.axs["gravity"].remove()
-        self.axs["gravity"] = self.fig.add_subplot(ss)
+        self.axs["gravity"] = self.fig.add_subplot(
+            ss,
+        )
         # self.fig.axs = self.fig.add_axes((0,40,0,40))
         self.scatter = self.axs["gravity"].scatter(
             x, y, s=labels, c=col)
@@ -47,12 +51,30 @@ class GravityPlot(object):
         self.axs["gravity"].set_xlim(0, 400)
         self.axs["gravity"].set_ylim(0, 400)
         self.axs["gravity"].grid()
-
+        norm = plt.Normalize(pot.min(), pot.max())
+        colors = mpl.cm.viridis(norm(pot))
         ss = self.axs["potential"].get_subplotspec()
         self.axs["potential"].remove()
         self.axs["potential"] = self.fig.add_subplot(ss, projection="3d")
-        self.potential = self.axs["potential"].plot_wireframe(mesh[0], mesh[1], np.log10(
-            pot.reshape(-1, mesh[0].shape[0])), rstride=5, cstride=5)  # , [pot.min(), pot.max()], [0, 10] cmap=mpl.cm.magma
+
+        X, Y, Z = mesh[0], mesh[1], pot.reshape(-1, mesh[0].shape[0])
+        print(X.shape, Y.shape, Z.shape)
+        rcount, ccount = 30, 30
+        # colors=colors)  # , [pot.min(), pot.max()], [0, 10] cmap=mpl.cm.magma
+        self.potential = self.axs["potential"].plot_surface(
+            X, Y, np.log10(Z),  lw=0.1, rcount=rcount, ccount=ccount,
+            cmap=mpl.cm.viridis, alpha=0.6, edgecolor="grey")
+
+        # self.axs["potential"].contourf(
+        #     X, Y, Z, zdir='z', offset=-9.5, cmap='coolwarm')
+        # self.axs["potential"].contourf(
+        #     X, Y, Z, zdir='x', offset=-300, cmap='coolwarm')
+        # self.axs["potential"].contourf(
+        #     X, Y, Z, zdir='y', offset=-300, cmap='coolwarm')
+        self.axs["potential"].set(
+            xlabel='X', ylabel='Y', zlabel='Z')
+        # self.potential = self.axs["potential"].plot_surface(
+        # mesh[0], mesh[1], np.log10(pot.reshape(-1, mesh[0].shape[0])), cmap=mpl.cm.magma)
 
         xmin, ymin, xmax, ymax = self.engine.plot_range()
         # plt.xlim([xmin*-1, xmax*3])
@@ -95,14 +117,24 @@ class GravityPlot(object):
         )
 
         # self.field.remove()
-        vector_fields, pot, mesh = self.engine.all_vectors(10, 10)
+        vector_fields, pot, mesh = self.engine.all_vectors(20, 100)
         # print(vector_fields.shape)
         # coords = vector_fields[:,0,:]
         vectors = vector_fields[:, 1, :]
+        # vectors[np.linalg.norm(vectors) > np.percentile(np.linalg.norm(
+        #     vectors), 10)] = [0.1, 0.1, 0.1]
         # x = coords[:,0]
         # y = coords[:,1]
         # self.field.remove()
         self.field.set_UVC(vectors[:, 0], vectors[:, 1])
+        # self.axs["gravity"].relim()
+        # self.axs["gravity"].autoscale_view()
+
+        # if self.axs["potential"].collections is not None:
+
+        #     self.axs["potential"].collections.remove(self.potential)
+        # self.potential = self.axs["potential"].plot_wireframe(mesh[0], mesh[1], np.log10(
+        #     pot.reshape(-1, mesh[0].shape[0])), rstride=5, cstride=5)
         # self.axs["potential"].collections.remove(self.potential)
         # self.potential = self.axs["potential"].plot_wireframe(mesh[0], mesh[1], np.log10(
         #     pot.reshape(-1, mesh[0].shape[0])), rstride=5, cstride=5)
@@ -171,7 +203,7 @@ def test_plot():
     # print("--------------------------------")
 
     obj = {}
-    masses = [10**8, 10**3, 10**8]
+    masses = [10**8, 10**5, 10**6]
     pos = np.array([[150, 150, 0], [150, 50, 0], [100, 100, 0]])
     vel = np.array(([0, 0, 0], [0.08, 0, 0], [0.04, 0, 0]))
     for i in range(3):

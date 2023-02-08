@@ -72,7 +72,7 @@ class SimulationEngine:
         self.G = 6.67*10**(-11)
         self.last_dst = np.infty
         self.range = self.plot_range()
-        self.range = (0, 0, 200, 200)
+        self.range = (0, 0, 300, 300)
         self.time_delta = 1/1
 
     def step(self) -> dict[int, Sphere]:
