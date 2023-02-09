@@ -21,7 +21,7 @@ class GravityPlot(object):
 
     def setup_plot(self):
         # Vector fields
-        vector, pot, mesh = self.engine.all_vectors(20, 1)
+        vector, pot, mesh = self.engine.all_vectors(20, 5)
         coords = vector[:, 0, :]
         vectors = vector[:, 1, :]
         x = coords[:, 0]
